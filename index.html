@@ -35,7 +35,7 @@
                 <div>
                     <label for="custom-alias" class="text-sm font-semibold text-slate-400 mb-2 block">Alias Kustom (Opsional)</label>
                     <div class="flex items-center">
-                        <span class="bg-slate-700 text-slate-400 p-4 rounded-l-lg border-y-2 border-l-2 border-slate-600">9qr.de/elinf_zubs_</span>
+                        <span class="bg-slate-700 text-slate-400 p-4 rounded-l-lg border-y-2 border-l-2 border-slate-600">shrtco.de/elinf_zubs_</span>
                         <input type="text" id="custom-alias" placeholder="namaunik" class="w-full p-4 bg-slate-700 text-white rounded-r-lg border-2 border-slate-600 focus:border-amber-400 focus:ring-0 transition duration-300">
                     </div>
                 </div>
@@ -95,29 +95,34 @@
                 const finalAlias = customSuffix ? `elinf_zubs_${customSuffix}` : '';
 
                 try {
-                    // Menggunakan API dari 9qr.de yang mendukung alias kustom
-                    let apiUrl = `https://9qr.de/api/v2/create?url=${encodeURIComponent(longUrl)}`;
+                    // MENGGUNAKAN API DARI SHRTCO.DE
+                    let apiUrl = `https://api.shrtco.de/v2/shorten?url=${encodeURIComponent(longUrl)}`;
                     if (finalAlias) {
-                        apiUrl += `&custom=${finalAlias}`;
+                        apiUrl += `&custom_code=${finalAlias}`;
                     }
 
                     const response = await fetch(apiUrl);
                     const data = await response.json();
 
-                    if (data.shorturl) {
-                        displayResult(data.shorturl);
-                        saveToHistory(longUrl, data.shorturl);
+                    if (data.ok) {
+                        const shortUrl = data.result.full_short_link;
+                        displayResult(shortUrl);
+                        saveToHistory(longUrl, shortUrl);
                         loadHistory();
                     } else {
-                        throw new Error(data.message || 'Alias ini sudah digunakan. Coba yang lain.');
+                        // Membuat pesan error lebih ramah pengguna
+                        let friendlyError = data.error.replace("For safety reasons, ","").replace("please use our short domains (shrtco.de, 9qr.de, shiny.link) instead.","URL tidak valid.").replace("Custom code", "Alias");
+                        throw new Error(friendlyError);
                     }
                 } catch (error) {
                     displayError(error.message);
                 } finally {
                     toggleLoading(false);
-                    form.reset();
+                    // Hanya reset kolom alias agar URL panjang tetap ada jika terjadi error
+                    customAliasInput.value = '';
                 }
             };
+
 
             // --- Fungsi untuk UI & Utilitas ---
             const toggleLoading = (isLoading) => {
@@ -137,6 +142,7 @@
                 errorMessage.classList.add('hidden');
                 shortUrlLink.href = url;
                 shortUrlLink.textContent = url.replace('https://', '');
+                form.reset(); // Reset seluruh form jika berhasil
             };
 
             const displayError = (message) => {
