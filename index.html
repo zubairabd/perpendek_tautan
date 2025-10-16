@@ -23,7 +23,7 @@
                 <h1 class="text-3xl md:text-4xl font-bold text-white">
                     <span class="text-amber-400">Elinf Zubs</span> URL Shortener
                 </h1>
-                <p class="text-slate-400 mt-2">Perpendek URL panjang Anda dengan alias kustom.</p>
+                <p class="text-slate-400 mt-2">Perpendek URL panjang Anda dengan cepat dan mudah.</p>
             </div>
 
             <!-- Form Input -->
@@ -31,13 +31,6 @@
                 <div>
                     <label for="long-url" class="sr-only">URL Panjang</label>
                     <input type="url" id="long-url" placeholder="Masukkan URL panjang di sini..." class="w-full p-4 bg-slate-700 text-white rounded-lg border-2 border-slate-600 focus:border-amber-400 focus:ring-0 transition duration-300" required>
-                </div>
-                <div>
-                    <label for="custom-alias" class="text-sm font-semibold text-slate-400 mb-2 block">Alias Kustom (Opsional)</label>
-                    <div class="flex items-center">
-                        <span class="bg-slate-700 text-slate-400 p-4 rounded-l-lg border-y-2 border-l-2 border-slate-600">shrtco.de/elinf_zubs_</span>
-                        <input type="text" id="custom-alias" placeholder="namaunik" class="w-full p-4 bg-slate-700 text-white rounded-r-lg border-2 border-slate-600 focus:border-amber-400 focus:ring-0 transition duration-300">
-                    </div>
                 </div>
                 <button type="submit" id="submit-btn" class="w-full bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold py-4 px-8 rounded-lg transition duration-300 transform hover:scale-105 flex items-center justify-center">
                     <span id="btn-text">Perpendek URL</span>
@@ -72,7 +65,6 @@
             // --- Referensi Elemen DOM ---
             const form = document.getElementById('shorten-form');
             const longUrlInput = document.getElementById('long-url');
-            const customAliasInput = document.getElementById('custom-alias');
             const submitBtn = document.getElementById('submit-btn');
             const btnText = document.getElementById('btn-text');
             const loadingSpinner = document.getElementById('loading-spinner');
@@ -89,37 +81,37 @@
                 errorMessage.textContent = '';
                 
                 const longUrl = longUrlInput.value;
-                const customSuffix = customAliasInput.value.trim();
                 
-                // Membuat alias kustom dengan prefix 'elinf_zubs_'
-                const finalAlias = customSuffix ? `elinf_zubs_${customSuffix}` : '';
-
                 try {
-                    // MENGGUNAKAN API DARI SHRTCO.DE
-                    let apiUrl = `https://api.shrtco.de/v2/shorten?url=${encodeURIComponent(longUrl)}`;
-                    if (finalAlias) {
-                        apiUrl += `&custom_code=${finalAlias}`;
-                    }
+                    // MENGGUNAKAN API DARI CLEANURI
+                    const apiUrl = 'https://cleanuri.com/api/v1/shorten';
 
-                    const response = await fetch(apiUrl);
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `url=${encodeURIComponent(longUrl)}`
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`Server merespons dengan status: ${response.status}`);
+                    }
+                    
                     const data = await response.json();
 
-                    if (data.ok) {
-                        const shortUrl = data.result.full_short_link;
+                    if (data.result_url) {
+                        const shortUrl = data.result_url;
                         displayResult(shortUrl);
                         saveToHistory(longUrl, shortUrl);
                         loadHistory();
                     } else {
-                        // Membuat pesan error lebih ramah pengguna
-                        let friendlyError = data.error.replace("For safety reasons, ","").replace("please use our short domains (shrtco.de, 9qr.de, shiny.link) instead.","URL tidak valid.").replace("Custom code", "Alias");
-                        throw new Error(friendlyError);
+                        throw new Error(data.error || 'Gagal memperpendek URL. Pastikan URL Anda valid.');
                     }
                 } catch (error) {
                     displayError(error.message);
                 } finally {
                     toggleLoading(false);
-                    // Hanya reset kolom alias agar URL panjang tetap ada jika terjadi error
-                    customAliasInput.value = '';
                 }
             };
 
@@ -142,7 +134,7 @@
                 errorMessage.classList.add('hidden');
                 shortUrlLink.href = url;
                 shortUrlLink.textContent = url.replace('https://', '');
-                form.reset(); // Reset seluruh form jika berhasil
+                form.reset();
             };
 
             const displayError = (message) => {
@@ -163,10 +155,8 @@
             // --- Logika untuk Riwayat (Local Storage) ---
             const saveToHistory = (long, short) => {
                 let history = JSON.parse(localStorage.getItem('urlHistory')) || [];
-                // Menghindari duplikat
                 if (!history.some(item => item.short === short)) {
-                    history.unshift({ long, short, date: new Date().toLocaleDateString('id-ID') });
-                    // Batasi riwayat hingga 5 item
+                    history.unshift({ long, short });
                     if (history.length > 5) {
                         history.pop();
                     }
@@ -200,7 +190,6 @@
             form.addEventListener('submit', shortenUrl);
             copyBtn.addEventListener('click', copyToClipboard);
             
-            // Event listener untuk tombol salin di riwayat
             historyList.addEventListener('click', (e) => {
                 if(e.target.classList.contains('history-copy-btn')) {
                     const urlToCopy = e.target.dataset.url;
@@ -212,7 +201,6 @@
                 }
             });
 
-            // Muat riwayat saat halaman pertama kali dibuka
             loadHistory();
         });
     </script>
