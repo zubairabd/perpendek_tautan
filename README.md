@@ -1,7 +1,7 @@
 # 🔗 Elinf Zubs - URL Shortener
 
-![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.x-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
-![JavaScript](https://img.shields.io/badge/Vanilla%20JS-ES6-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![JavaScript](https://img.shields.io/badge/Vanilla%20JS-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
 ![9qr API](https://img.shields.io/badge/9qr.de%20API-Live-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Online-success?style=for-the-badge)
 
