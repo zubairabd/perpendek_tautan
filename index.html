@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elinf Zubs - URL Shortener</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-300 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="w-full max-w-2xl">
+        <!-- Main Card -->
+        <div class="bg-slate-800 p-8 rounded-xl shadow-2xl shadow-amber-500/5">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-white">
+                    <span class="text-amber-400">Elinf Zubs</span> URL Shortener
+                </h1>
+                <p class="text-slate-400 mt-2">Perpendek URL panjang Anda dengan alias kustom.</p>
+            </div>
+
+            <!-- Form Input -->
+            <form id="shorten-form" class="space-y-4">
+                <div>
+                    <label for="long-url" class="sr-only">URL Panjang</label>
+                    <input type="url" id="long-url" placeholder="Masukkan URL panjang di sini..." class="w-full p-4 bg-slate-700 text-white rounded-lg border-2 border-slate-600 focus:border-amber-400 focus:ring-0 transition duration-300" required>
+                </div>
+                <div>
+                    <label for="custom-alias" class="text-sm font-semibold text-slate-400 mb-2 block">Alias Kustom (Opsional)</label>
+                    <div class="flex items-center">
+                        <span class="bg-slate-700 text-slate-400 p-4 rounded-l-lg border-y-2 border-l-2 border-slate-600">9qr.de/elinf_zubs_</span>
+                        <input type="text" id="custom-alias" placeholder="namaunik" class="w-full p-4 bg-slate-700 text-white rounded-r-lg border-2 border-slate-600 focus:border-amber-400 focus:ring-0 transition duration-300">
+                    </div>
+                </div>
+                <button type="submit" id="submit-btn" class="w-full bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold py-4 px-8 rounded-lg transition duration-300 transform hover:scale-105 flex items-center justify-center">
+                    <span id="btn-text">Perpendek URL</span>
+                    <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-slate-900 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </button>
+            </form>
+
+            <!-- Result Card -->
+            <div id="result-card" class="mt-6 bg-slate-700 p-4 rounded-lg hidden">
+                 <p id="error-message" class="text-red-400 text-center mb-2"></p>
+                <div class="flex items-center justify-between">
+                    <a href="#" id="short-url" target="_blank" class="text-lg text-amber-400 font-semibold truncate hover:underline"></a>
+                    <button id="copy-btn" class="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300">Salin</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Section -->
+        <div id="history-container" class="mt-8 w-full">
+            <h2 class="text-xl font-bold text-white text-center mb-4">Riwayat Tautan</h2>
+            <div id="history-list" class="space-y-3">
+                <!-- Riwayat akan dimuat di sini oleh JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- Referensi Elemen DOM ---
+            const form = document.getElementById('shorten-form');
+            const longUrlInput = document.getElementById('long-url');
+            const customAliasInput = document.getElementById('custom-alias');
+            const submitBtn = document.getElementById('submit-btn');
+            const btnText = document.getElementById('btn-text');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const resultCard = document.getElementById('result-card');
+            const shortUrlLink = document.getElementById('short-url');
+            const copyBtn = document.getElementById('copy-btn');
+            const errorMessage = document.getElementById('error-message');
+            const historyList = document.getElementById('history-list');
+
+            // --- Fungsi Utama untuk Memperpendek URL ---
+            const shortenUrl = async (event) => {
+                event.preventDefault();
+                toggleLoading(true);
+                errorMessage.textContent = '';
+                
+                const longUrl = longUrlInput.value;
+                const customSuffix = customAliasInput.value.trim();
+                
+                // Membuat alias kustom dengan prefix 'elinf_zubs_'
+                const finalAlias = customSuffix ? `elinf_zubs_${customSuffix}` : '';
+
+                try {
+                    // Menggunakan API dari 9qr.de yang mendukung alias kustom
+                    let apiUrl = `https://9qr.de/api/v2/create?url=${encodeURIComponent(longUrl)}`;
+                    if (finalAlias) {
+                        apiUrl += `&custom=${finalAlias}`;
+                    }
+
+                    const response = await fetch(apiUrl);
+                    const data = await response.json();
+
+                    if (data.shorturl) {
+                        displayResult(data.shorturl);
+                        saveToHistory(longUrl, data.shorturl);
+                        loadHistory();
+                    } else {
+                        throw new Error(data.message || 'Alias ini sudah digunakan. Coba yang lain.');
+                    }
+                } catch (error) {
+                    displayError(error.message);
+                } finally {
+                    toggleLoading(false);
+                    form.reset();
+                }
+            };
+
+            // --- Fungsi untuk UI & Utilitas ---
+            const toggleLoading = (isLoading) => {
+                if (isLoading) {
+                    btnText.classList.add('hidden');
+                    loadingSpinner.classList.remove('hidden');
+                    submitBtn.disabled = true;
+                } else {
+                    btnText.classList.remove('hidden');
+                    loadingSpinner.classList.add('hidden');
+                    submitBtn.disabled = false;
+                }
+            };
+            
+            const displayResult = (url) => {
+                resultCard.classList.remove('hidden');
+                errorMessage.classList.add('hidden');
+                shortUrlLink.href = url;
+                shortUrlLink.textContent = url.replace('https://', '');
+            };
+
+            const displayError = (message) => {
+                resultCard.classList.remove('hidden');
+                errorMessage.classList.remove('hidden');
+                shortUrlLink.textContent = '';
+                errorMessage.textContent = `Error: ${message}`;
+            }
+
+            const copyToClipboard = () => {
+                navigator.clipboard.writeText(shortUrlLink.href);
+                copyBtn.textContent = 'Tersalin!';
+                setTimeout(() => {
+                    copyBtn.textContent = 'Salin';
+                }, 2000);
+            };
+
+            // --- Logika untuk Riwayat (Local Storage) ---
+            const saveToHistory = (long, short) => {
+                let history = JSON.parse(localStorage.getItem('urlHistory')) || [];
+                // Menghindari duplikat
+                if (!history.some(item => item.short === short)) {
+                    history.unshift({ long, short, date: new Date().toLocaleDateString('id-ID') });
+                    // Batasi riwayat hingga 5 item
+                    if (history.length > 5) {
+                        history.pop();
+                    }
+                    localStorage.setItem('urlHistory', JSON.stringify(history));
+                }
+            };
+
+            const loadHistory = () => {
+                historyList.innerHTML = '';
+                let history = JSON.parse(localStorage.getItem('urlHistory')) || [];
+                if (history.length === 0) {
+                    historyList.innerHTML = '<p class="text-center text-slate-500">Belum ada riwayat.</p>';
+                    return;
+                }
+
+                history.forEach(item => {
+                    const historyItem = document.createElement('div');
+                    historyItem.className = 'bg-slate-800 p-4 rounded-lg flex justify-between items-center';
+                    historyItem.innerHTML = `
+                        <div class="truncate">
+                            <a href="${item.short}" target="_blank" class="text-amber-400 font-semibold hover:underline">${item.short.replace('https://', '')}</a>
+                            <p class="text-slate-400 text-sm truncate">${item.long}</p>
+                        </div>
+                        <button class="history-copy-btn bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-3 rounded-lg text-sm" data-url="${item.short}">Salin</button>
+                    `;
+                    historyList.appendChild(historyItem);
+                });
+            };
+            
+            // --- Event Listeners ---
+            form.addEventListener('submit', shortenUrl);
+            copyBtn.addEventListener('click', copyToClipboard);
+            
+            // Event listener untuk tombol salin di riwayat
+            historyList.addEventListener('click', (e) => {
+                if(e.target.classList.contains('history-copy-btn')) {
+                    const urlToCopy = e.target.dataset.url;
+                    navigator.clipboard.writeText(urlToCopy);
+                    e.target.textContent = 'Tersalin!';
+                    setTimeout(() => {
+                        e.target.textContent = 'Salin';
+                    }, 2000);
+                }
+            });
+
+            // Muat riwayat saat halaman pertama kali dibuka
+            loadHistory();
+        });
+    </script>
+</body>
+</html>
+
